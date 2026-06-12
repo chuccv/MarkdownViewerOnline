@@ -3,43 +3,93 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ page.title | default: "Markdown Viewer" }}</title>
+  <title>{{ page.title | default: page.name | replace: '.md', '' }}</title>
   <style>
     :root[data-theme="light"] {
       --bg: #ffffff;
+      --sidebar-bg: #f6f8fa;
       --text: #24292e;
       --border: #eaecef;
       --code-bg: #f6f8fa;
       --blockquote: #6a737d;
       --link: #0366d6;
+      --link-active: #0366d6;
       --btn-bg: #f0f0f0;
       --btn-text: #333;
+      --nav-hover: #e1e4e8;
     }
     :root[data-theme="dark"] {
       --bg: #0d1117;
+      --sidebar-bg: #161b22;
       --text: #c9d1d9;
       --border: #30363d;
       --code-bg: #161b22;
       --blockquote: #8b949e;
       --link: #58a6ff;
+      --link-active: #58a6ff;
       --btn-bg: #21262d;
       --btn-text: #c9d1d9;
+      --nav-hover: #21262d;
     }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
       font-size: 16px;
       line-height: 1.6;
       color: var(--text);
       background: var(--bg);
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 24px 24px 80px;
+      display: flex;
+      min-height: 100vh;
       transition: background 0.2s, color 0.2s;
     }
+
+    /* Sidebar */
+    #sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+    }
+    #sidebar h2 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--blockquote);
+      padding: 8px 16px;
+      margin-bottom: 4px;
+    }
+    #sidebar a {
+      display: block;
+      padding: 6px 16px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      border-radius: 4px;
+      margin: 1px 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #sidebar a:hover { background: var(--nav-hover); }
+    #sidebar a.active { background: var(--nav-hover); color: var(--link); font-weight: 600; }
+
+    /* Main content */
+    #content {
+      margin-left: 260px;
+      padding: 40px 48px 80px;
+      max-width: 960px;
+      width: 100%;
+    }
+
+    /* Theme toggle */
     #theme-toggle {
       position: fixed;
-      top: 16px;
+      top: 12px;
       right: 16px;
       cursor: pointer;
       background: var(--btn-bg);
@@ -47,9 +97,11 @@
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 4px 12px;
-      font-size: 14px;
+      font-size: 13px;
       z-index: 99;
     }
+
+    /* Markdown styles */
     h1, h2, h3, h4, h5, h6 { font-weight: 600; margin-top: 24px; margin-bottom: 16px; }
     h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
     h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
@@ -60,36 +112,57 @@
       font-size: 85%;
       font-family: "SFMono-Regular", Consolas, monospace;
     }
-    pre {
-      background: var(--code-bg);
-      padding: 16px;
-      border-radius: 6px;
-      overflow: auto;
-    }
+    pre { background: var(--code-bg); padding: 16px; border-radius: 6px; overflow: auto; }
     pre code { background: none; padding: 0; }
     table { border-collapse: collapse; width: 100%; margin: 16px 0; }
     th, td { border: 1px solid var(--border); padding: 8px 12px; }
     th { background: var(--code-bg); font-weight: 600; }
-    blockquote {
-      border-left: 4px solid var(--border);
-      margin: 0;
-      padding: 0 16px;
-      color: var(--blockquote);
-    }
+    tr:nth-child(even) td { background: var(--sidebar-bg); }
+    blockquote { border-left: 4px solid var(--border); padding: 0 16px; color: var(--blockquote); }
     a { color: var(--link); text-decoration: none; }
     a:hover { text-decoration: underline; }
     img { max-width: 100%; }
     hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+    p { margin-bottom: 16px; }
+    ul, ol { padding-left: 24px; margin-bottom: 16px; }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      #sidebar { display: none; }
+      #content { margin-left: 0; padding: 24px 16px 60px; }
+    }
   </style>
 </head>
 <body>
+  <nav id="sidebar">
+    <h2>📄 Documents</h2>
+    {% assign pages = site.pages | sort: 'name' %}
+    {% for p in pages %}
+      {% unless p.name == '' or p.path contains '_' %}
+        {% if p.name contains '.md' or p.name == 'index.md' %}
+          {% assign label = p.name | replace: '.md', '' | replace: '-', ' ' | replace: '_', ' ' %}
+          {% if p.name == 'index.md' %}
+            {% assign label = '🏠 Home' %}
+          {% endif %}
+          <a href="{{ p.url | relative_url }}"
+             {% if page.url == p.url %}class="active"{% endif %}>
+            {{ label }}
+          </a>
+        {% endif %}
+      {% endunless %}
+    {% endfor %}
+  </nav>
+
   <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
-  {{ content }}
+
+  <main id="content">
+    {{ content }}
+  </main>
+
   <script>
     const html = document.documentElement;
     const btn = document.getElementById('theme-toggle');
-    const saved = localStorage.getItem('theme') || 'light';
-    setTheme(saved);
+    setTheme(localStorage.getItem('theme') || 'light');
 
     function setTheme(t) {
       html.setAttribute('data-theme', t);
